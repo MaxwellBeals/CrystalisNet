@@ -34,19 +34,24 @@ def handle_incoming_connections():
         print(f"Connection from {addr}")
 
         data = client_sock.recv(1024).decode('utf-8')
-        if data == "request_nodes":
-            client_sock.sendall(json.dumps(nodes).encode('utf-8'))
-        else:
-            # Handle registration of a new node
-            try:
-                new_node_id, new_node_ip, new_node_port = data.split(',')
-                nodes[new_node_id] = (new_node_ip, int(new_node_port))
-                save_nodes(nodes)
-                print(f"Registered new node: {new_node_id} at {new_node_ip}:{new_node_port}")
-                client_sock.sendall("Node registered successfully.".encode('utf-8'))
-            except Exception as e:
-                print(f"Error registering node: {e}")
-                client_sock.sendall("Failed to register node.".encode('utf-8'))
+
+        match data:  # Using match to register commands
+            case "request_nodes": client_sock.sendall(json.dumps(nodes).encode('utf-8'))  # Send a list of nodes
+            case "the_cake": client_sock.sendall('...is a lie!'.encode('utf-8'))  # Example command
+
+            case _:
+
+                # Handle registration of a new node
+                try:
+                    new_node_id, new_node_ip, new_node_port = json.loads(data)
+                    nodes[new_node_id] = (new_node_ip.strip(), int(new_node_port))
+                    save_nodes(nodes)
+                    print(f"Registered new node: {new_node_id} at {new_node_ip}:{new_node_port}")
+                    client_sock.sendall("Node registered successfully.".encode('utf-8'))
+
+                except Exception as e:
+                    print(f"Error registering node: {e}")
+                    client_sock.sendall("Failed to register node.".encode('utf-8'))
 
         client_sock.close()
 
@@ -59,6 +64,7 @@ def run_primary_node():
 
     # Start thread to listen for incoming connections
     threading.Thread(target=handle_incoming_connections).start()
+
 
 # Example usage
 if __name__ == "__main__":
